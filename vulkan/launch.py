@@ -3,8 +3,6 @@
 from pathlib import Path
 import tempfile
 from argparse import ArgumentParser, Namespace
-import os
-import io
 import time
 import subprocess
 import sys
@@ -31,6 +29,7 @@ class DockerContainer:
                 self._container_id,
             ),
             stdin=subprocess.DEVNULL,
+            check=True,
             text=True,
         )
 
@@ -159,7 +158,7 @@ def _main() -> None:
 
     container_id = _run_container(options)
 
-    with DockerContainer(container_id) as container:
+    with DockerContainer(container_id):
         result = subprocess.run(
             options.vnc_password_file.absolute(),
             stdin=subprocess.DEVNULL,
