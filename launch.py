@@ -3,8 +3,6 @@
 from pathlib import Path
 import tempfile
 from argparse import ArgumentParser, Namespace
-import os
-import io
 import time
 import subprocess
 import sys
@@ -31,6 +29,7 @@ class DockerContainer:
                 self._container_id,
             ),
             stdin=subprocess.DEVNULL,
+            check=True,
             text=True,
         )
 
@@ -99,8 +98,8 @@ def _parse_arguments() -> Namespace:
     return options
 
 
-def _run_container(options: Namespace, log_prefix: Path) -> str:
-    result = subprocess.run(
+def _run_container(options: Namespace) -> str:
+    subprocess.run(
         args=(
             "docker",
             "build",
@@ -111,14 +110,9 @@ def _run_container(options: Namespace, log_prefix: Path) -> str:
             ".",
         ),
         stdin=subprocess.DEVNULL,
+        check=True,
         text=True,
     )
-    if result.returncode != 0:
-        msg = (
-            f"Failed to execute `{' '.join(result.args)}` "
-            f"with the status code `{result.returncode}`."
-        )
-        raise RuntimeError(msg)
 
     docker_run_stdout = tempfile.TemporaryFile("w+t", encoding="UTF-8")
     subprocess.Popen(
@@ -150,26 +144,18 @@ def _run_container(options: Namespace, log_prefix: Path) -> str:
 def _main() -> None:
     options = _parse_arguments()
 
-    log_prefix = Path("logs")
-    log_prefix.mkdir(exist_ok=True)
+    container_id = _run_container(options)
 
-    container_id = _run_container(options, log_prefix)
-
-    with DockerContainer(container_id) as container:
-        result = subprocess.run(
+    with DockerContainer(container_id):
+        subprocess.run(
             f"docker exec {container_id} xauth add :0 . `mcookie`",
             stdin=subprocess.DEVNULL,
             shell=True,
+            check=True,
             text=True,
         )
-        if result.returncode != 0:
-            msg = (
-                f"Failed to execute `{' '.join(result.args)}` "
-                f"with the status code `{result.returncode}`."
-            )
-            raise RuntimeError(msg)
 
-        result = subprocess.run(
+        subprocess.run(
             args=(
                 "docker",
                 "exec",
@@ -184,32 +170,22 @@ def _main() -> None:
                 "GLX",
             ),
             stdin=subprocess.DEVNULL,
+            check=True,
             text=True,
         )
-        if result.returncode != 0:
-            msg = (
-                f"Failed to execute `{' '.join(result.args)}` "
-                f"with the status code `{result.returncode}`."
-            )
-            raise RuntimeError(msg)
 
         result = subprocess.run(
             options.vnc_password_file.absolute(),
             stdin=subprocess.DEVNULL,
             capture_output=True,
+            check=True,
             text=True,
         )
         print(result.stderr, file=sys.stdout, end='')
         print(result.stderr, file=sys.stderr, end='')
-        if result.returncode != 0:
-            msg = (
-                f"Failed to execute `{' '.join(result.args)}` "
-                f"with the status code `{result.returncode}`."
-            )
-            raise RuntimeError(msg)
         vnc_password = result.stdout.splitlines()[0]
 
-        result = subprocess.run(
+        subprocess.run(
             args=(
                 "docker",
                 "exec",
@@ -220,16 +196,11 @@ def _main() -> None:
                 "/home/ubuntu/.vnc/passwd",
             ),
             stdin=subprocess.DEVNULL,
+            check=True,
             text=True,
         )
-        if result.returncode != 0:
-            msg = (
-                f"Failed to execute `{' '.join(result.args)}` "
-                f"with the status code `{result.returncode}`."
-            )
-            raise RuntimeError(msg)
 
-        result = subprocess.run(
+        subprocess.run(
             args=(
                 "docker",
                 "exec",
@@ -255,16 +226,11 @@ def _main() -> None:
                 "-repeat",
             ),
             stdin=subprocess.DEVNULL,
+            check=True,
             text=True,
         )
-        if result.returncode != 0:
-            msg = (
-                f"Failed to execute `{' '.join(result.args)}` "
-                f"with the status code `{result.returncode}`."
-            )
-            raise RuntimeError(msg)
 
-        result = subprocess.run(
+        subprocess.run(
             args=(
                 "docker",
                 "exec",
@@ -277,16 +243,11 @@ def _main() -> None:
                 "localhost:5900",
             ),
             stdin=subprocess.DEVNULL,
+            check=True,
             text=True,
         )
-        if result.returncode != 0:
-            msg = (
-                f"Failed to execute `{' '.join(result.args)}` "
-                f"with the status code `{result.returncode}`."
-            )
-            raise RuntimeError(msg)
 
-        result = subprocess.run(
+        subprocess.run(
             args=(
                 "docker",
                 "exec",
@@ -301,14 +262,9 @@ def _main() -> None:
                 "https://game.mahjongsoul.com/",
             ),
             stdin=subprocess.DEVNULL,
+            check=True,
             text=True,
         )
-        if result.returncode != 0:
-            msg = (
-                f"Failed to execute `{' '.join(result.args)}` "
-                f"with the status code `{result.returncode}`."
-            )
-            raise RuntimeError(msg)
 
 
 if __name__ == "__main__":
