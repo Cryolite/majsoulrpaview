@@ -218,8 +218,6 @@ def _main() -> None:
                 "-rfbauth",
                 "/home/ubuntu/.vnc/passwd",
                 "-localhost",
-                "+extension",
-                "GLX",
                 ":0",
             ),
             stdin=subprocess.DEVNULL,
