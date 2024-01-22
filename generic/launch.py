@@ -240,7 +240,7 @@ def _main() -> None:
                 "DISPLAY=:0",
                 container_id,
                 "google-chrome",
-                "--use-gl=egl",
+                "--use-gl=desktop",
                 "--no-first-run",
                 "--no-default-browser-check",
                 f"--window-wize={options.width},{options.height}",
