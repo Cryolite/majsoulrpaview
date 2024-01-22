@@ -147,33 +147,6 @@ def _main() -> None:
     container_id = _run_container(options)
 
     with DockerContainer(container_id):
-        subprocess.run(
-            f"docker exec {container_id} xauth add :0 . `mcookie`",
-            stdin=subprocess.DEVNULL,
-            shell=True,
-            check=True,
-            text=True,
-        )
-
-        subprocess.run(
-            args=(
-                "docker",
-                "exec",
-                "-d",
-                container_id,
-                "Xvfb",
-                ":0",
-                "-screen",
-                "0",
-                f"{options.width}x{options.height}x{options.depth}",
-                "+extension",
-                "GLX",
-            ),
-            stdin=subprocess.DEVNULL,
-            check=True,
-            text=True,
-        )
-
         result = subprocess.run(
             options.vnc_password_file.absolute(),
             stdin=subprocess.DEVNULL,
@@ -185,14 +158,31 @@ def _main() -> None:
         print(result.stderr, file=sys.stderr, end='')
         vnc_password = result.stdout.splitlines()[0]
 
+        if vnc_password.find("'") != -1:
+            msg = "`--vnc-password` cannot contain any single quote `'`."
+            raise RuntimeError(msg)
+
         subprocess.run(
             args=(
                 "docker",
                 "exec",
                 container_id,
-                "x11vnc",
-                "-storepasswd",
-                vnc_password,
+                "/bin/bash",
+                "-c",
+                f"echo '{vnc_password}' | vncpasswd -f > /home/ubuntu/.vnc/passwd",
+            ),
+            stdin=subprocess.DEVNULL,
+            check=True,
+            text=True,
+        )
+
+        subprocess.run(
+            args=(
+                "docker",
+                "exec",
+                container_id,
+                "chmod",
+                "600",
                 "/home/ubuntu/.vnc/passwd",
             ),
             stdin=subprocess.DEVNULL,
@@ -206,24 +196,19 @@ def _main() -> None:
                 "exec",
                 "-d",
                 container_id,
-                "x11vnc",
-                "-display",
-                ":0",
-                "-auth",
-                "guess",
-                "-rfbport",
-                "5900",
+                "Xvnc",
                 "-geometry",
                 f"{options.width}x{options.height}",
-                #"-viewonly",
-                "-shared",
-                "-forever",
-                "-loop",
-                "-localhost",
+                "-depth",
+                str(options.depth),
+                "-rfbport",
+                "5900",
                 "-rfbauth",
                 "/home/ubuntu/.vnc/passwd",
-                "-xkb",
-                "-repeat",
+                "-localhost",
+                "+extension",
+                "GLX",
+                ":0",
             ),
             stdin=subprocess.DEVNULL,
             check=True,
