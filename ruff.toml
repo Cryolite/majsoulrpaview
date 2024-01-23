@@ -1,7 +1,5 @@
 target-version = "py310"
 
-line-length = 79
-
 [lint]
 select = ["ALL"]
 ignore = [
@@ -14,4 +12,5 @@ ignore = [
     "PLR0912", # too-many-branches
     "PLR0913", # too-many-arguments
     "PLR0915", # too-many-statements
+    "T201",    # print
 ]
