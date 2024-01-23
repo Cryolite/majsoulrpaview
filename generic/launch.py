@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 
-from pathlib import Path
-import tempfile
-from argparse import ArgumentParser, Namespace
-import time
 import subprocess
 import sys
+import tempfile
+import time
+from argparse import ArgumentParser, Namespace
+from pathlib import Path
 
 
 class DockerContainer:
@@ -15,12 +15,7 @@ class DockerContainer:
     def __enter__(self) -> None:
         pass
 
-    def __exit__(
-        self,
-        exc_type,
-        exc_value,
-        traceback
-    ) -> None:
+    def __exit__(self, exc_type, exc_value, traceback) -> None:  # noqa: ANN001
         subprocess.run(
             args=(
                 "docker",
@@ -65,7 +60,7 @@ def _parse_arguments() -> Namespace:
         "--vnc-password-file",
         type=Path,
         required=True,
-        metavar="PASSWORD_FILE"
+        metavar="PASSWORD_FILE",
     )
 
     options = parser.parse_args()
@@ -138,7 +133,7 @@ def _run_container(options: Namespace) -> str:
     time.sleep(1.0)
     docker_run_stdout.seek(0)
 
-    return docker_run_stdout.readline().rstrip('\n')
+    return docker_run_stdout.readline().rstrip("\n")
 
 
 def _main() -> None:
@@ -154,8 +149,8 @@ def _main() -> None:
             check=True,
             text=True,
         )
-        print(result.stderr, file=sys.stdout, end='')
-        print(result.stderr, file=sys.stderr, end='')
+        print(result.stderr, file=sys.stdout, end="")
+        print(result.stderr, file=sys.stderr, end="")
         vnc_password = result.stdout.splitlines()[0]
 
         if vnc_password.find("'") != -1:
