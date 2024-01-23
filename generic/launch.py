@@ -79,7 +79,7 @@ def _parse_arguments() -> Namespace:
         )
         raise RuntimeError(msg)
 
-    if options.vnc_port <= 1024 or 49152 <= options.vnc_port:
+    if options.vnc_port < 1024 or 49151 < options.vnc_port:
         msg = f"{options.vnc_port}: An invalid value for `--vnc-port`."
         raise RuntimeError(msg)
 
