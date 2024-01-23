@@ -143,7 +143,7 @@ def _main() -> None:
 
     with DockerContainer(container_id):
         result = subprocess.run(
-            options.vnc_password_file.absolute(),
+            options.vnc_password_file.absolute(),  # noqa: S603
             stdin=subprocess.DEVNULL,
             capture_output=True,
             check=True,
