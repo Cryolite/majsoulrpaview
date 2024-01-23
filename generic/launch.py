@@ -87,7 +87,7 @@ def _parse_arguments() -> Namespace:
         msg = f"{options.vnc_password_file}: Does not exist."
         raise RuntimeError(msg)
     if not options.vnc_password_file.is_file():
-        msg = "f{options.vnc_password_file}: Not a file."
+        msg = f"{options.vnc_password_file}: Not a file."
         raise RuntimeError(msg)
 
     return options
