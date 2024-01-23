@@ -12,5 +12,8 @@ ignore = [
     "PLR0912", # too-many-branches
     "PLR0913", # too-many-arguments
     "PLR0915", # too-many-statements
+
     "T201",    # print
+    "SIM300",  # yoda-conditions
+    "PLR2004", # magic-value-comparison
 ]
