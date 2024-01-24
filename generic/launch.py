@@ -37,16 +37,10 @@ class DockerContainer:
 def _parse_arguments() -> Namespace:
     parser = ArgumentParser()
     parser.add_argument(
-        "--width",
-        default=1280,
-        type=int,
-        metavar="WIDTH",
-    )
-    parser.add_argument(
-        "--height",
+        "--viewport-height",
         default=720,
         type=int,
-        metavar="HEIGHT",
+        metavar="VIEWPORT_HEIGHT",
     )
     parser.add_argument(
         "--depth",
@@ -56,10 +50,27 @@ def _parse_arguments() -> Namespace:
         metavar="DEPTH",
     )
     parser.add_argument(
-        "--vnc-port",
-        default=9090,
+        "--remote-host",
+        default='127.0.0.1',
+        metavar="REMOTE_HOST",
+    )
+    parser.add_argument(
+        "--remote-port",
+        default=19222,
         type=int,
-        metavar="VNC_PORT",
+        metavar="REMOTE_PORT",
+    )
+    parser.add_argument(
+        "--message-queue-port",
+        default=37247,
+        type=int,
+        metavar="MESSAGE_QUEUE_PORT",
+    )
+    parser.add_argument(
+        "--novnc-port",
+        default=6080,
+        type=int,
+        metavar="NOVNC_PORT",
     )
     parser.add_argument(
         "--vnc-password-file",
@@ -70,22 +81,26 @@ def _parse_arguments() -> Namespace:
 
     options = parser.parse_args()
 
-    if options.width < 1280 or 3840 < options.width:
+    if options.viewport_height < 720 or 2160 < options.viewport_height:
         msg = (
-            f"{options.width}: `--width` must be an integer "
-            "within the range [1280, 3840]."
+            f"{options.viewport_height}: `--viewport-height` must be "
+            "an integer within the range [720, 2160]."
         )
         raise RuntimeError(msg)
 
-    if options.height < 720 or 2160 < options.height:
+    if options.remote_port <= 1024 or 49152 <= options.remote_port:
+        msg = f"{options.remote_port}: An invalid value for `--remote-port`."
+        raise RuntimeError(msg)
+
+    if options.message_queue_port <= 1024 or 49152 <= options.message_queue_port:
         msg = (
-            f"{options.height}: `--height` must be an integer "
-            "within the range [720, 2160]."
+            f"{options.message_queue_port}:"
+            " An invalid value for `--message-queue-port`."
         )
         raise RuntimeError(msg)
 
-    if options.vnc_port <= 1024 or 49152 <= options.vnc_port:
-        msg = f"{options.vnc_port}: An invalid value for `--vnc-port`."
+    if options.novnc_port <= 1024 or 49152 <= options.novnc_port:
+        msg = f"{options.novnc_port}: An invalid value for `--novnc-port`."
         raise RuntimeError(msg)
 
     if not options.vnc_password_file.exists():
@@ -106,7 +121,7 @@ def _run_container(options: Namespace) -> str:
             "--pull",
             "--progress=plain",
             "-t",
-            "cryolite/majsoulvnc",
+            "cryolite/majsoulrpaview:generic",
             ".",
         ),
         stdin=subprocess.DEVNULL,
@@ -121,13 +136,11 @@ def _run_container(options: Namespace) -> str:
             "run",
             "--cap-add",
             "SYS_ADMIN",
-            "-v",
-            "/run/dbus:/host/run/debus",
             "-p",
-            f"{options.vnc_port}:9090",
-            "-itd",
+            f"{options.novnc_port}:6080",
+            "-d",
             "--rm",
-            "cryolite/majsoulvnc",
+            "cryolite/majsoulrpaview:generic",
             "sleep",
             "INFINITY",
         ),
@@ -144,6 +157,9 @@ def _run_container(options: Namespace) -> str:
 def _main() -> None:
     options = _parse_arguments()
 
+    width = (options.viewport_height // 9) * 16
+    height = (width * 3) // 4
+
     container_id = _run_container(options)
 
     with DockerContainer(container_id):
@@ -157,7 +173,6 @@ def _main() -> None:
         print(result.stderr, file=sys.stdout, end='')
         print(result.stderr, file=sys.stderr, end='')
         vnc_password = result.stdout.splitlines()[0]
-
         if vnc_password.find("'") != -1:
             msg = "`--vnc-password` cannot contain any single quote `'`."
             raise RuntimeError(msg)
@@ -166,10 +181,15 @@ def _main() -> None:
             args=(
                 "docker",
                 "exec",
+                "-d",
                 container_id,
-                "/bin/bash",
-                "-c",
-                f"echo '{vnc_password}' | vncpasswd -f > /home/ubuntu/.vnc/passwd",
+                "Xvfb",
+                ":0",
+                "-screen",
+                "0",
+                f"{width}x{height}x{options.depth}",
+                "+extension",
+                "GLX",
             ),
             stdin=subprocess.DEVNULL,
             check=True,
@@ -181,9 +201,10 @@ def _main() -> None:
                 "docker",
                 "exec",
                 container_id,
-                "chmod",
-                "600",
-                "/home/ubuntu/.vnc/passwd",
+                "x11vnc",
+                "-storepasswd",
+                vnc_password,
+                ".vnc/passwd",
             ),
             stdin=subprocess.DEVNULL,
             check=True,
@@ -196,19 +217,22 @@ def _main() -> None:
                 "exec",
                 "-d",
                 container_id,
-                "Xvnc",
-                "-geometry",
-                f"{options.width}x{options.height}",
-                "-depth",
-                str(options.depth),
+                "x11vnc",
+                "-display",
+                ":0",
                 "-rfbport",
                 "5900",
-                "-rfbauth",
-                "/home/ubuntu/.vnc/passwd",
+                "-geometry",
+                f"{width}x{height}",
+                "-shared",
+                "-forever",
+                "-loop",
                 "-localhost",
-                "+extension",
-                "GLX",
-                ":0",
+                "-o",
+                "x11vnc.log",
+                "-repeat",
+                "-rfbauth",
+                ".vnc/passwd",
             ),
             stdin=subprocess.DEVNULL,
             check=True,
@@ -222,10 +246,6 @@ def _main() -> None:
                 "-d",
                 container_id,
                 "/usr/share/novnc/utils/launch.sh",
-                "--listen",
-                "9090",
-                "--vnc",
-                "localhost:5900",
             ),
             stdin=subprocess.DEVNULL,
             check=True,
@@ -238,18 +258,25 @@ def _main() -> None:
                 "exec",
                 "-e",
                 "DISPLAY=:0",
+                "-d",
                 container_id,
-                "google-chrome",
-                "--use-gl=desktop",
-                "--no-first-run",
-                "--no-default-browser-check",
-                f"--window-wize={options.width},{options.height}",
-                "https://game.mahjongsoul.com/",
+                "bash",
+                "-c",
+                (
+                    ". majsoulrpa/.venv/bin/activate; "
+                    "majsoulrpa_remote_browser"
+                    f" --remote_host {options.remote_host}"
+                    f" --remote_port {options.remote_port}"
+                    f" --message_queue_port {options.message_queue_port}"
+                    f" --viewport_height {options.viewport_height}"
+                ),
             ),
             stdin=subprocess.DEVNULL,
             check=True,
             text=True,
         )
+
+        input("Press any key to kill the remote browser...")
 
 
 if __name__ == "__main__":
