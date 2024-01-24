@@ -1,0 +1,19 @@
+target-version = "py310"
+
+[lint]
+select = ["ALL"]
+ignore = [
+    "D",       # pydocstyle
+    "ANN002",  # missing-type-args
+    "ANN003",  # missing-type-kwargs
+    "ANN101",  # missing-type-self
+    "ANN102",  # missing-type-cls
+    "PLR0911", # too-many-return-statements
+    "PLR0912", # too-many-branches
+    "PLR0913", # too-many-arguments
+    "PLR0915", # too-many-statements
+
+    "T201",    # print
+    "SIM300",  # yoda-conditions
+    "PLR2004", # magic-value-comparison
+]
