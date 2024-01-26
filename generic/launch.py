@@ -83,11 +83,11 @@ def _parse_arguments() -> Namespace:
         )
         raise RuntimeError(msg)
 
-    if options.remote_port <= 1024 or 49152 <= options.remote_port:
+    if options.remote_port < 1024 or 49151 < options.remote_port:
         msg = f"{options.remote_port}: An invalid value for `--remote-port`."
         raise RuntimeError(msg)
 
-    if options.message_queue_port <= 1024 or 49152 <= options.message_queue_port:
+    if options.message_queue_port < 1024 or 49151 < options.message_queue_port:
         msg = (
             f"{options.message_queue_port}:"
             " An invalid value for `--message-queue-port`."
